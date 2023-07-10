@@ -15,23 +15,41 @@ sleep 3
 #echo 'V' > /dev/watchdog
 watchdog -t 10 /dev/watchdog0
 
-echo "============ fun is about to begin, sit tight"
-if ! [ -f /sys/class/gpio/gpio47 ]; then 
-    echo 47 > /sys/class/gpio/export
-    echo out > /sys/class/gpio/gpio47/direction
-fi
-if ! [ -f /sys/class/gpio/gpio48 ]; then
-    echo 48 > /sys/class/gpio/export
-    echo out > /sys/class/gpio/gpio48/direction
+echo "==== remounting SD card if required"
+if ! mount | grep -q $MMC; then
+  echo "not mounted, trying to mount mmcblk0"
+  mount /dev/mmcblk0p1 $MMC
+else
+  echo "it's mounted, proceeding"
 fi
 
-# turn on yellow led
-echo 1 > /sys/class/gpio/gpio47/value
+echo "============ fun is about to begin, sit tight"
+if ! [ -d /sys/class/gpio/gpio47 ]; then 
+  echo 47 > /sys/class/gpio/export
+  echo out > /sys/class/gpio/gpio47/direction
+  echo 0 > /sys/class/gpio/gpio47/value
+fi
+if ! [ -d /sys/class/gpio/gpio48 ]; then
+  echo 48 > /sys/class/gpio/export
+  echo out > /sys/class/gpio/gpio48/direction
+  echo 0 > /sys/class/gpio/gpio48/value
+fi
+if ! [ -d /sys/class/gpio/gpio14 ]; then
+  echo 14 > /sys/class/gpio/export
+  echo out > /sys/class/gpio/gpio48/direction
+  echo 1 > /sys/class/gpio/gpio14/value
+fi
+
+# turn on IR leds
+echo 1 > /sys/class/gpio/gpio14/value
 
 echo "0. Gathering system info"
 cat /proc/mtd > $MMC/info_mtd.log
 dmesg > $MMC/info_dmesg.log
 lsmod > $MMC/info_lsmod.log
+ps > $MMC/info_ps.log
+df -h > $MMC/info_df.log
+mount > $MMC/info_mount.log
 
 echo "0.1. creating backup of partitions"
 STATE=0
@@ -52,7 +70,7 @@ done
 echo "!!! Done with the backups, proceeding..."
 
 echo "1. bind mount passwd and shadow"
-umount /etc/passwd /etc/shadow 2>&1 /dev/null
+umount /etc/passwd /etc/shadow 2>&1 > /dev/null
 mount -o bind /tmp/Test/passwd /etc/passwd
 mount -o bind /tmp/Test/shadow /etc/shadow
 
@@ -73,11 +91,27 @@ echo "5. run upgrade to openipc"
 
 if ! [ -f "${UBOOT_FILE}" ]; then
   echo "Update uboot file not found at ${UBOOT_FILE}"
+  echo 1 > /sys/class/gpio/gpio47/value
+  echo 0 > /sys/class/gpio/gpio487/value
+  while [ 1 ]; do
+    echo 0 > /sys/class/gpio/gpio14/value
+    sleep 0.25
+    echo 1 > /sys/class/gpio/gpio14/value
+    sleep 0.25
+  done
   exit 1
 fi
 
 if ! [ -f "${ENV_FILE}" ]; then
   echo "Update env file not found at ${ENV_FILE}"
+  echo 0 > /sys/class/gpio/gpio47/value
+  echo 1 > /sys/class/gpio/gpio487/value
+  while [ 1 ]; do
+    echo 0 > /sys/class/gpio/gpio14/value
+    sleep 0.25
+    echo 1 > /sys/class/gpio/gpio14/value
+    sleep 0.25
+  done
   exit 1
 fi
 
@@ -89,6 +123,14 @@ cat /proc/mtd | tail -n+2 | while read; do
     echo "it's boot"
     if ! [ "${MTD_SIZE}" == "${EXPECTED_BOOT_SIZE}" ]; then
       echo "boot is not ${EXPECTED_BOOT_SIZE}"
+      echo 1 > /sys/class/gpio/gpio47/value
+      echo 1 > /sys/class/gpio/gpio487/value
+      while [ 1 ]; do
+        echo 0 > /sys/class/gpio/gpio14/value
+        sleep 0.25
+        echo 1 > /sys/class/gpio/gpio14/value
+        sleep 0.25
+      done
       exit 1
     fi
     echo "Copying uboot to ${MTD_NAME}"

@@ -45,4 +45,6 @@ uknor8m=mw.b ${baseaddr} ff 1000000; tftpboot ${baseaddr} uImage.${soc} ; sf pro
 urnand=mw.b ${baseaddr} ff 1000000; tftpboot ${baseaddr} rootfs.ubi.${soc} ; nand erase 0x400000 0x7c00000; nand write ${baseaddr} 0x400000 ${filesize}
 urnor16m=mw.b ${baseaddr} ff 1000000; tftpboot ${baseaddr} rootfs.squashfs.${soc} ; sf probe 0; sf erase 0x350000 0xa00000; sf write ${baseaddr} 0x350000 ${filesize}
 urnor8m=mw.b ${baseaddr} ff 1000000; tftpboot ${baseaddr} rootfs.squashfs.${soc} ; sf probe 0; sf erase 0x250000 0x500000; sf write ${baseaddr} 0x250000 ${filesize}
-wlandevice=atbm603x-t31-mmc1
+wlandev=atbm603x-t31-mmc1
+wlanssid=MySSID
+wlanpass=MyPass

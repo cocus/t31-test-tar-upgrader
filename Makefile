@@ -16,7 +16,7 @@ u-boot-t31x-universal.bin:
 	@echo " [OPENIPC]  $@"
 	@wget -q https://github.com/OpenIPC/firmware/releases/download/latest/u-boot-t31x-universal.bin 2>&1 > /dev/null
 
-uncompress_to_sd.zip: autoconfig.sh ubootenv.bin Test.tar uImage.t31 rootfs.squashfs.t31 u-boot-t31x-universal.bin
+uncompress_to_sd.zip: ubootenv.bin Test.tar uImage.t31 rootfs.squashfs.t31 u-boot-t31x-universal.bin
 	@echo " [ZIP]      $^ -> $@"
 	@zip -r $@ $^ 2>&1 > /dev/null
 
