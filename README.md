@@ -1,19 +1,15 @@
 ### Whats this?
 This project is a simple tool that creates an all-in-one to upgrade certain stock firmwares of T31 SoC IP cameras into the open-source OpenIPC. In particular this only works with 16MB SPI flash. Should also work with 8MB flash chips, but some changes are required on `default-uenv.txt` and probably `test.sh`.
 
-### Requirements
-Install the `u-boot-tools` package so mkenvimage is available. `tar`, `zip`, `make` and `wget` should be installed as well.
-
 ### How to use it
-Modify the "MySSID" and "MyPassword" inside the `default-uenv.txt` file to reflect your WiFi credentials. Run `make`. Unzip the newly-created `uncompress_to_sd.zip` to a FAT32 formatted SD card. Plug the card into the camera. Turn the camera on, and wait.
+Run `make`. Unzip the newly-created `uncompress_to_sd.zip` to a FAT32 formatted SD card. Plug the card into the camera. Turn the camera on, and wait.
 
 ### How it works
 Some firmwares based on the Hualai stock firmware for the T31 SoC contains an interesting backdoor (or feature?) that lets arbitrary code execution from an SD card.
 
 One of the init scripts on these generic firmwares look for the existance of `/tmp/factory`, and if it finds it, the main camera app doesn't start, but rather a script is executed from `/tmp`. There's an additional application (rather than a script) that looks for a specific file on the SD card (`Test.tar`), and if it finds it, it uncompresses it, and checks for the existency of some other files. If everything seems to be in order, the `/tmp/factory` file appears, and it's possible to run a custom `test.sh` shell script from the freshly extracted tar file. For more info, [I'd link the source of a good example for a similar camera](https://qiita.com/Dmitrievich/items/05ec93b70a049a90e684 "I'd link the source of a good example for a similar camera") (use Google translate if needed).
 
-Knowing that it's possible to run arbitrary code on these cameras, it's just a matter of figuring out a way to update the entire flash memory so it runs OpenIPC.
-OpenIPC provides a tool to upgrade *some* cameras to it (a statically linked binary that can run on stock firmwares), but it's not a particular good choice for this camera.
+Knowing that it's possible to run arbitrary code on these cameras, it's just a matter of figuring out a way to update the entire flash memory so it runs Thingino.
 The original partition table from the stock firmware contains the following entries:
 | mtd | size | name |
 | ------------ | ------------ | ------------ |
@@ -26,32 +22,18 @@ The original partition table from the stock firmware contains the following entr
 | mtd6 | 00060000 | cfg |
 | mtd7 | 00010000 | para |
 
+`boot`, where u-boot is stored, has the same size on stock and Thingino. However, the stock firmware doesn't have a `env` partition (which is where u-boot's environment is stored). 
 
-Take into account that OpenIPC's ultimate firmware uses a different partition layout:
-| mtd | size | name |
-| ------------ | ------------ | ------------ |
-| mtd0 | 00040000 | boot |
-| mtd1 | 00010000 | env |
-| mtd2 | 0300000 | kernel |
-| mtd3 | 0a00000 | rootfs |
-| mtd4 | - | roofs_data |
+Following [Paul's](https://github.com/themactep) instructions at [Thingino Upgrade from other Firmware](https://github.com/themactep/thingino-firmware/wiki/Installation#from-another-firmware), it's possible to just run these commands on the stock firmware.
+In short, the `test.sh` script runs:
+```
+flashcp /path/to/mmc/u-boot-t31x.bin /dev/mtd0
+flash_eraseall /dev/mtd1
+```
 
+Which updates the uboot binary from the one packaged after using this Makefile, and erases the NEXT partition after uboot, so the new uboot's env is empty and uses the default one, which can read the SD card and trigger an update with the autoupdate-full.bin.
 
-`boot`, where u-boot is stored, has the same size on both firmwares. However, the stock firmware doesn't have a `env` partition (which is where u-boot's environment is stored). Nonetheless, the stock firmware's `kernel` partition starts at the same address where `env` should start on OpenIPC. This means, OpenIPC's u-boot and env could be updated in-place without much headache.
-Considering the stock firmware already contains `flash_cp` (a tool to write binaries directly to MTD devices, like the mtd0 or mtd1), it is possible to swap the u-boot and provide a custom environment from within the stock firmware using the `Test.tar` method from above.
-These additional firmware files come directly from the latest OpenIPC CICD builds and are copied alongside `Test.tar` on the SD card, so they can be read from the stock firmware's Linux, or the u-boot later on.
-If this is executed, then after a reboot, the OpenIPC u-boot would boot instead of the stock firmware's u-boot.
-
-However, due to the other partitions not matching what OpenIPC expects, it'd fail to boot. Thus, a custom boot script was provided. This new boot macro is stored on a custom u-boot environment created by this tool. Updating the default `bootcmd` env variable does the trick.
-Instead of trying to boot as it would normally, some commands were injected there.
-First of all, OpenIPC's u-boot doesn't recognize the SD card by default since a GPIO is not properly set, so the first thing would be to initialize the SD card by setting the GPIO and running `mmc rescan`.
-Then, run the same commands provided by the [OpenIPC firmware install guide](https://openipc.org/cameras/vendors/ingenic/socs/t31x?mac=2e-39-e0-b1-ef-87&cip=192.168.1.10&sip=192.168.1.254&net=wifi&rom=nor16m&var=ultimate&sd=sd "OpenIPC firmware install guide"), which updates the uImage (kernel) and rootfs directly on the expected addresses on the SPI flash, then clears the region of the `rootfs_data`, and finally executes the `setnor16m` to properly set up the boot command that OpenIPC expects and reboots.
-Note that this command comes from the `bootcmdnor` environment variable, which was also modified to properly initialize the SD card on every single boot; alongside turning on the yellow LED (gpio 47).
-
-
-Per the new WiFi driver loading mechanism, a new environment variable is also set with the appropriate driver name `wlandev=atbm603x-t31-mmc1`.
-
-After the system reboots, OpenIPC is fully running, and hopefully connected to your WiFi.
+NOTE: it might be possible that the camera reboots and ends up in the "cloner" mode (i.e. rom usb mode). Just reboot it.
 
 ### Bonus:
 The `test.sh` also dumps the stock firmware's partitions to the SD card for future use, so nothing should be lost.

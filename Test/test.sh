@@ -3,8 +3,8 @@
 
 EXPECTED_BOOT_SIZE="00040000"
 MMC="/media/mmc"
-UBOOT_FILE="${MMC}/u-boot-t31x-universal.bin"
-ENV_FILE="${MMC}/ubootenv.bin"
+UBOOT_FILE="${MMC}/u-boot-t31x.bin"
+#ENV_FILE="${MMC}/ubootenv.bin"
 
 dmesg -n1
 
@@ -24,7 +24,7 @@ else
 fi
 
 echo "============ fun is about to begin, sit tight"
-if ! [ -d /sys/class/gpio/gpio47 ]; then 
+if ! [ -d /sys/class/gpio/gpio47 ]; then
   echo 47 > /sys/class/gpio/export
   echo out > /sys/class/gpio/gpio47/direction
   echo 0 > /sys/class/gpio/gpio47/value
@@ -102,18 +102,18 @@ if ! [ -f "${UBOOT_FILE}" ]; then
   exit 1
 fi
 
-if ! [ -f "${ENV_FILE}" ]; then
-  echo "Update env file not found at ${ENV_FILE}"
-  echo 0 > /sys/class/gpio/gpio47/value
-  echo 1 > /sys/class/gpio/gpio487/value
-  while [ 1 ]; do
-    echo 0 > /sys/class/gpio/gpio14/value
-    sleep 0.25
-    echo 1 > /sys/class/gpio/gpio14/value
-    sleep 0.25
-  done
-  exit 1
-fi
+#if ! [ -f "${ENV_FILE}" ]; then
+#  echo "Update env file not found at ${ENV_FILE}"
+#  echo 0 > /sys/class/gpio/gpio47/value
+#  echo 1 > /sys/class/gpio/gpio487/value
+#  while [ 1 ]; do
+#    echo 0 > /sys/class/gpio/gpio14/value
+#    sleep 0.25
+#    echo 1 > /sys/class/gpio/gpio14/value
+#    sleep 0.25
+#  done
+#  exit 1
+#fi
 
 cat /proc/mtd | tail -n+2 | while read; do
   MTD_DEV=$(echo ${REPLY} | cut -f1 -d:)
@@ -135,8 +135,10 @@ cat /proc/mtd | tail -n+2 | while read; do
     fi
     echo "Copying uboot to ${MTD_NAME}"
     flashcp ${UBOOT_FILE} /dev/${MTD_DEV}
-    echo "Copying env update to mtd1..."
-    flashcp ${ENV_FILE} /dev/mtd1
+    echo "Nuking the mtd1"
+    flash_eraseall /dev/mtd1
+#    echo "Copying env update to mtd1..."
+#    flashcp ${ENV_FILE} /dev/mtd1
     reboot
     exit 0
   fi
