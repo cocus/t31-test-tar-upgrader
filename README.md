@@ -1,5 +1,5 @@
 ### Whats this?
-This project is a simple tool that creates an all-in-one to upgrade certain stock firmwares of T31 SoC IP cameras into the open-source OpenIPC. In particular this only works with 16MB SPI flash. Should also work with 8MB flash chips, but some changes are required on `default-uenv.txt` and probably `test.sh`.
+This project is a simple tool that creates an all-in-one to upgrade certain stock firmwares of T31 SoC IP cameras into the open-source [Thingino](https://thingino.com/). In particular this only works with 16MB SPI flash. Should also work with 8MB flash chips, but some changes are required on `default-uenv.txt` and probably `test.sh`.
 
 ### How to use it
 Run `make`. Unzip the newly-created `uncompress_to_sd.zip` to a FAT32 formatted SD card. Plug the card into the camera. Turn the camera on, and wait.
