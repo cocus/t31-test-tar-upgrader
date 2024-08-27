@@ -2,7 +2,7 @@ all: uncompress_to_sd.zip
 
 u-boot-t31x.bin:
 	@echo " [GTXASPEC-UBOOT] $@"
-	@wget -q https://github.com/gtxaspec/u-boot-ingenic/releases/download/latest/u-boot-t31x.bin 2>&1 > /dev/null
+	@wget -q https://github.com/gtxaspec/u-boot-ingenic/releases/download/latest/u-boot-isvp_t31_sfcnor_ddr128M.bin -O $@ 2>&1 > /dev/null
 
 autoupdate-full.bin:
 	@echo " [THINGINO-Fw]    $@"
