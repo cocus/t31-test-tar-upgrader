@@ -2,11 +2,11 @@ all: uncompress_to_sd.zip
 
 u-boot-t31x.bin:
 	@echo " [GTXASPEC-UBOOT] $@"
-	@wget -q https://github.com/gtxaspec/u-boot-ingenic/releases/download/latest/u-boot-isvp_t31_sfcnor_ddr128M.bin -O $@ 2>&1 > /dev/null
+	@wget -q https://github.com/gtxaspec/u-boot-ingenic/releases/latest/download/u-boot-isvp_t31_sfcnor_ddr128M.bin -O $@ 2>&1 > /dev/null
 
 autoupdate-full.bin:
 	@echo " [THINGINO-Fw]    $@"
-	@wget -q https://github.com/themactep/thingino-firmware/releases/download/firmware/thingino-personalcam.bin -O $@ 2>&1 > /dev/null
+	@wget -q https://github.com/themactep/thingino-firmware/releases/latest/download/thingino-personalcam.bin -O $@ 2>&1 > /dev/null
 
 
 uncompress_to_sd.zip: Test.tar u-boot-t31x.bin autoupdate-full.bin
