@@ -1,8 +1,24 @@
 ### Whats this?
-This project is a simple tool that creates an all-in-one to upgrade certain stock firmwares of T31 SoC IP cameras into the open-source [Thingino](https://thingino.com/). In particular this only works with 16MB SPI flash. Should also work with 8MB flash chips, but some changes are required on `default-uenv.txt` and probably `test.sh`.
+This project is a simple tool that creates an all-in-one to upgrade certain stock firmwares of T31 SoC IP cameras into the open-source [Thingino](https://thingino.com/). In particular this only works with 16MB SPI flash. Should also work with 8MB flash chips. However, this only implements the Personal Cam Pan and Cam2 cameras.
 
 ### How to use it
-Run `make`. Unzip the newly-created `uncompress_to_sd.zip` to a FAT32 formatted SD card. Plug the card into the camera. Turn the camera on, and wait.
+NOTE: It only supports Personal Cam Pan and Personal Cam2, but in theory it might support a lot more.
+1. Run `make`.
+2. Unzip the newly-created `personalcam2.zip` or `personalpan.zip` to a FAT32 formatted SD card. FAT16 or exFAT WON'T WORK!.
+3. Plug the card into the camera. Turn the camera on, and wait.
+4. The Yellow, Blue and IR LEDs show you the status of the update, as follows:
+ - Blue blink, NO IR, NO Yellow: dumping backup to SD.
+ - Yellow blink, IR ON, NO Blue: update file not found.
+ - Blue blink, IR ON, NO Yellow: expected boot partition size doesn't match.
+ - Blue + Yellow blink, NO IR: process finished, wait for the watchdog to reboot the camera (or reboot it yourself)
+ - Blue + Yellow blink, solid IR: couldn't find boot partition.
+ - Blue solid, NO IR, NO Yellow: Flashing uboot.
+ - Yellow solid, NO IR, NO Blue: Generating full backup of all partitions.
+ - Blue + Yellow solid, NO IR: Erasing mtd1.
+5. Once the LED goes dark (or you cycle its power), the system reboots into the new u-boot. This new u-boot will see the `autoupdate-full.bin` and flash it. This part of the process doesn't show any LED indication, so you need to be patient. If it takes more than 5 minutes, power cycle it (and hope for the best).
+6. Fast Blue LED blinks will occur, which means the cycle is finished, and the camera is booting Thingino!
+
+If it doesn't work, you'll need to take it apart and follow the [Thingino Cloner](https://thingino.com/cloner) tutorial.
 
 ### How it works
 Some firmwares based on the Hualai stock firmware for the T31 SoC contains an interesting backdoor (or feature?) that lets arbitrary code execution from an SD card.
@@ -38,20 +54,12 @@ NOTE: it might be possible that the camera reboots and ends up in the "cloner" m
 ### Bonus:
 The `test.sh` also dumps the stock firmware's partitions to the SD card for future use, so nothing should be lost.
 
-In order to recover the original firmware, a custom u-boot macro could be set on `bootcmd`so after OpenIPC reboots, u-boot executes this command instead of booting, and reverts back to the stock firmware.
+In order to recover the original firmware, a custom u-boot macro could be set on `bootcmd`so after Thingino reboots, u-boot executes this command instead of booting, and reverts back to the stock firmware.
 
-Since the `test.sh` script copies the partitions one-by-one, a concatenation of all these needs to be manually created before attempting to recover the original firmware.
-
-This can be done thru ssh on the camera (with the SD card connected) running OpenIPC, or in any computer where the SD card is mounted.
-
-
+`fullbackup.bin` is created automatically when running the exploit and it's on the SD card, so it's possible tro just set the a custom `bootcmd` environment variable on the camera so in its next reboot it'll restore the stock firmware:
 ```bash
-# cat mtd_backup_mtd0_boot.bin mtd_backup_mtd1_kernel.bin mtd_backup_mtd2_rootfs.bin mtd_backup_mtd3_app.bin mtd_backup_mtd4_kback.bin mtd_backup_mtd5_aback.bin mtd_backup_mtd6_cfg.bin mtd_backup_mtd7_para.bin > stock.bin
-```
-
-
-Once `stock.bin` is created, set the a custom `bootcmd` environment variable on the camera so in the next reboot the camera restores the stock firmware:
-```bash
-# fw_setenv bootcmd 'gpio clear 39; mmc rescan; mw.b 0x80600000 0xff 0x1000000; fatload mmc 0:1 0x80600000 stock.bin; sf probe 0; sf erase 0x0 0x1000000; sf write 0x80600000 0x0 0x1000000; reset'
+# fw_setenv bootcmd 'mmc rescan; mw.b 0x80600000 0xff 0x1000000; fatload mmc 0:1 0x80600000 stock.bin; sf probe 0; sf erase 0x0 0x1000000; sf write 0x80600000 0x0 0x1000000; reset'
 # reboot
 ```
+
+You can use the `fullbackup.bin` file as part of a single image that can be written on the flash using Ingenic's cloner.
