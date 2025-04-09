@@ -1,5 +1,2 @@
-Test.tar
-factory
-uncompress_to_sd.zip
-u-boot-t31x.bin
-autoupdate-full.bin
+build*
+personal*.zip
